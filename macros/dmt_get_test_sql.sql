@@ -5,7 +5,7 @@
         graph_model=none
     ) %}
 
-    {% for k in input_mapping.keys() %}
+    {% for k in input_mapping.keys() if k != "is_incremental()" %}
         {# doing this outside the execute block allows dbt to infer the proper dependencies #}
         {% do ns.rendered_keys.update({k: render("{{ " + k + " }}")}) %}
     {% endfor %}
@@ -23,6 +23,11 @@
         {% endif %}
         {% set ns.test_sql = ns.graph_model.raw_sql %}
 
+        {% if "is_incremental()" in input_mapping.keys() %}
+            {# replace is_incremental() before first render #}
+            {% set ns.test_sql = ns.test_sql|replace("is_incremental()", input_mapping.pop("is_incremental()", "is_incremental()")) %}
+        {% endif %}
+        
         {% for k,v in input_mapping.items() %}
             {# render the original sql and replacement key before replacing because v is already rendered when it is passed to this test #}
             {% set ns.test_sql = render(ns.test_sql)|replace(ns.rendered_keys[k], v) %}
