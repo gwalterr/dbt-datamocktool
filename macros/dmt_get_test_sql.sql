@@ -1,11 +1,11 @@
-{% macro get_unit_test_sql(model, input_mapping) %}
+{% macro get_unit_test_sql(model, input_mapping, force_incremental) %}
     {% set ns=namespace(
         test_sql="(select 1) raw_sql",
         rendered_keys={},
         graph_model=none
     ) %}
 
-    {% for k in input_mapping.keys() if k != "is_incremental()" %}
+    {% for k in input_mapping.keys() %}
         {# doing this outside the execute block allows dbt to infer the proper dependencies #}
         {% do ns.rendered_keys.update({k: render("{{ " + k + " }}")}) %}
     {% endfor %}
@@ -23,9 +23,9 @@
         {% endif %}
         {% set ns.test_sql = ns.graph_model.raw_sql %}
 
-        {% if "is_incremental()" in input_mapping.keys() %}
+        {% if force_incremental is defined %}
             {# replace is_incremental() before first render #}
-            {% set ns.test_sql = ns.test_sql|replace("is_incremental()", input_mapping.pop("is_incremental()", "is_incremental()")) %}
+            {% set ns.test_sql = ns.test_sql|replace("is_incremental()", force_incremental) %}
         {% endif %}
         
         {% for k,v in input_mapping.items() %}
